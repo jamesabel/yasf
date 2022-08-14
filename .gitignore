@@ -131,3 +131,4 @@ dmypy.json
 # JCA
 .idea/
 docs/flake8_report.txt
+LICENSE.txt
