@@ -1,1 +1,1 @@
-from .yasf import sf
+from .yasf import sf, structured_sentinel
