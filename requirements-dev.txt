@@ -1,0 +1,11 @@
+# dev only
+wheel
+black
+pytest
+coverage
+pytest-cov
+pytest-pycharm
+twine
+flake8
+mypy
+#

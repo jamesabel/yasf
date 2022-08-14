@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# JCA
+.idea/
+docs/flake8_report.txt
