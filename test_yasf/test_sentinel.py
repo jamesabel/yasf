@@ -1,4 +1,3 @@
-
 from yasf import structured_sentinel
 
 
