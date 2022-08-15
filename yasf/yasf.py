@@ -2,8 +2,20 @@ from enum import Enum
 import decimal
 from decimal import Decimal
 import json
+from typing import Tuple, Union, Any
+import csv
+from tempfile import TemporaryDirectory
+from pathlib import Path
+from logging import getLogger
 
-structured_sentinel = "<>"  # illegal JSON
+from yasf.__version__ import __application_name__
+
+structured_sentinel = "<<>>"  # use illegal JSON
+_half_size = int(round(len(structured_sentinel)/2))
+escaped_structured_sentinel = structured_sentinel[:_half_size] + "/" + structured_sentinel[_half_size:]  # put some special character in the middle of the sentinel
+
+
+log = getLogger(__application_name__)
 
 
 def convert_serializable_special_cases(o):
@@ -41,25 +53,75 @@ def convert_serializable_special_cases(o):
     return serializable_representation
 
 
-def sf(*args, **kwargs) -> str:
+def _args_to_csv_string(*args):
+    """
+    Convert args to a comma-separated string
+    :param args: args
+    :return: comman separated string
+    """
+    with TemporaryDirectory() as temp_dir:
+        file_path = Path(temp_dir, "temp.txt")
+        with file_path.open("w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(*args)
+        with file_path.open() as f:
+            s = f.read().strip()
+    return s
+
+
+def _get_escape_structured_sentinel(value: Any) -> Any:
+    """
+    return a string that has any appearance of the sentinel escaped out
+    :param value -
+    :return: string with any sentinels escaped out
+    """
+    if isinstance(value, str):
+        if structured_sentinel in value:
+            log.info(f'sentinel "{structured_sentinel}" found in {str(value)}. While it may not cause an issue, it is recommended to not use the sentinel in structured data.')
+        value = value.replace(structured_sentinel, escaped_structured_sentinel)
+    return value
+
+
+def sf(*_args, **_kwargs) -> str:
     """
     Structured formatter helper function. When called with any number of positional or keyword arguments, creates a structured string representing those arguments.
     This is a short function name (sf) since it usually goes inside a logging call.
     Example code:
     question = "life"
     answer = 42
-    log.info(sf("test structured logging", question=question, answer=answer))
-    log:
-    2021-10-24T10:38:54.524721-07:00 - test_structured_logging - test_structured_logging.py - 16 - test_to_structured_logging - INFO - test structured logging <> {"question": "life", "answer": 42} <>
-    :param args: args
-    :param kwargs: kwargs
+    :param _args: args
+    :param _kwargs: kwargs
     """
 
-    separator = ","
+    # make sure the sentinel isn't in the arguments
+    args = []
+    for s in _args:
+        args.append(_get_escape_structured_sentinel(s))
+    kwargs = {}
+    for k, v in _kwargs.items():
+        kwargs[_get_escape_structured_sentinel(k)] = _get_escape_structured_sentinel(v)
+
     output_list = []
     if len(args) > 0:
-        output_list.append(separator.join(args))
+        args_string = _args_to_csv_string(args)
+        output_list.append(args_string)
     if len(kwargs) > 0:
         # use json.dumps to handle special strings (e.g. embedded quotes)
         output_list.extend([structured_sentinel, json.dumps(kwargs, default=convert_serializable_special_cases), structured_sentinel])
     return " ".join(output_list)
+
+
+def sf_separate(s: str) -> Tuple[Union[str, None], Union[str, None]]:
+    """
+    Separates a structured string into the args (as CSV string) and kwargs parts (as JSON, without sentinels).
+    :param s: structured format string
+    :return: a tuple of args (as list) and kwargs (as dict)
+    """
+    split_string = s.split(structured_sentinel)
+    args_string = None
+    kwargs_string = None
+    if len(split_string) > 0:
+        args_string = split_string[0].strip()
+    if len(split_string) > 1:
+        kwargs_string = split_string[1].strip()
+    return args_string, kwargs_string
