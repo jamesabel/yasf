@@ -11,7 +11,7 @@ from logging import getLogger
 from yasf.__version__ import __application_name__
 
 structured_sentinel = "<<>>"  # use illegal JSON
-_half_size = int(round(len(structured_sentinel)/2))
+_half_size = int(round(len(structured_sentinel) / 2))
 escaped_structured_sentinel = structured_sentinel[:_half_size] + "/" + structured_sentinel[_half_size:]  # put some special character in the middle of the sentinel
 
 
